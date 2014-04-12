@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "myLib.h"
+#include "gbalib.h"
 #include "text.h"
 
 void drawChar(int row, int col, u8 ch, u16 color) {

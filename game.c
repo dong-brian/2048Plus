@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "mylib.h"
+#include "gbalib.h"
 #include "text.h"
 
 #define RGB(r, g, b) ((r) | (g)<<5 | (b)<<10)
