@@ -11,12 +11,12 @@ PROGNAME = 2048Plus
 
 # The object files you want to compile into your program
 # This should be a space (SPACE!) separated list of .o files
-OFILES = Game.o GBALib.o Font.o Text.o KongouSisters.o Haruna.o Hiei.o Kirishima.o Kongou.o 
+OFILES = Game.o GBALib.o Font.o Text.o KongouSisters.o
 
 # The header files you have created.
 # This is necessary to determine when to recompile for files.
 # This should be a space (SPACE!) separated list of .h files
-HFILES = GBALib.h Text.h KongouSisters.h Haruna.h Hiei.h Kirishima.h Kongou.h
+HFILES = GBALib.h Text.h KongouSisters.h
 
 # The flags to run the vba program with
 # for a list of options run /usr/local/cs2110-tools/bin/vbam
