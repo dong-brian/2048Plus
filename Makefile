@@ -11,12 +11,12 @@ PROGNAME = 2048Plus
 
 # The object files you want to compile into your program
 # This should be a space (SPACE!) separated list of .o files
-OFILES = game.o gbalib.o font.o text.o
+OFILES = Game.o GBALib.o Font.o Text.o KongouSisters.o Haruna.o Hiei.o Kirishima.o Kongou.o 
 
 # The header files you have created.
 # This is necessary to determine when to recompile for files.
 # This should be a space (SPACE!) separated list of .h files
-HFILES = gbalib.h text.h
+HFILES = GBALib.h Text.h KongouSisters.h Haruna.h Hiei.h Kirishima.h Kongou.h
 
 # The flags to run the vba program with
 # for a list of options run /usr/local/cs2110-tools/bin/vbam
@@ -69,7 +69,7 @@ crt0.o: $(TOOLDIR)/arm-thumb-eabi/lib/crt0.s
 
 clean:
 	@echo "Removing all generated files"
-	@rm -f *.o *.elf *.gba $(GBADEPS)
+	@rm -f *.o *.elf $(GBADEPS)
 
 vba: $(PROGNAME).gba
 	@echo "[RUN] Running Emulator"

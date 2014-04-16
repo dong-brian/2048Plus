@@ -1,4 +1,4 @@
-#include "gbalib.h"
+#include "GBALib.h"
 
 u16* videoBuffer = (u16*) 0x6000000;
 
@@ -88,6 +88,20 @@ void shiftRectVertical(int row, int col, int width, int height, int shift) {
         for (int r = 0; r < height; r++) {
             shiftRowVertical(row + r, col, width, shift);
         }
+    }
+}
+
+void drawImage(const unsigned short *img) {
+    DMA[3].src = img;
+    DMA[3].dst = videoBuffer;
+    DMA[3].cnt = 38400 | DMA_ON;
+}
+
+void drawImageAt(int x, int y, int width, int height, const unsigned short *img) {
+    for (int i = 0; i < height; i++) {
+        DMA[3].src = img;
+        DMA[3].dst = videoBuffer[OFFSET(y + i, x, 240)];
+        DMA[3].cnt = width | DMA_ON;
     }
 }
 

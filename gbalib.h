@@ -115,4 +115,6 @@ void shiftRowHorizontal(int row, int col, int length, int shift);
 void shiftRowVertical(int row, int col, int length, int shift);
 void shiftRectHorizontal(int row, int col, int width, int height, int shift);
 void shiftRectVertical(int row, int col, int width, int height, int shift);
+void drawImage(const unsigned short *img);
+void drawImageAt(int x, int y, int width, int height, const unsigned short *img);
 void waitForVblank();

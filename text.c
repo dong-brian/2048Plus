@@ -1,8 +1,7 @@
 #include <stdio.h>
-#include <math.h>
 
-#include "gbalib.h"
-#include "text.h"
+#include "GBALib.h"
+#include "Text.h"
 
 void drawChar(int row, int col, u8 ch, u16 color) {
     for (int r = 0; r < 8; r++) {

@@ -2,10 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "gbalib.h"
-#include "text.h"
-
-#define RGB(r, g, b) ((r) | (g)<<5 | (b)<<10)
+#include "GBALib.h"
+#include "Text.h"
+#include "KongouSisters.h"
+#include "Haruna.h"
+#include "Hiei.h"
+#include "Kirishima.h"
+#include "Kongou.h"
 
 //integer percent for which 4's will spawn
 #define SPAWN_PERCENT 20
@@ -417,7 +420,7 @@ void gameOver(Outcome outcome, int score) {
  * 
  */
 void drawSplash() {
-    fillScreen(BLACK);
+    drawImage(KongouSistersBitmap);
     waitForVblank();
     drawString(70, 10, "2048+", YELLOW);
     drawString(90, 10, "Press Start to begin.", YELLOW);
