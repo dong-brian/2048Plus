@@ -1,7 +1,5 @@
 #include "GBALib.h"
 
-u16* videoBuffer = (u16*) 0x6000000;
-
 void setPixel(int row, int col, u16 color) {
     videoBuffer[OFFSET(row, col, 240)] = color;
 }

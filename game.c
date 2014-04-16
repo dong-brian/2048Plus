@@ -5,10 +5,6 @@
 #include "GBALib.h"
 #include "Text.h"
 #include "KongouSisters.h"
-#include "Haruna.h"
-#include "Hiei.h"
-#include "Kirishima.h"
-#include "Kongou.h"
 
 //integer percent for which 4's will spawn
 #define SPAWN_PERCENT 20
@@ -67,7 +63,7 @@ typedef struct {
     u16 color;
 } Block;
 
-extern u16* videoBuffer;
+typedef const unsigned short* Image;
 
 const int colors[] = {
     RED,
@@ -78,6 +74,14 @@ const int colors[] = {
     YELLOW
 };
 const int sizeColors = sizeof(colors)/sizeof(colors[0]);
+
+const Image kongous[] = {
+    Haruna
+    Hiei
+    Kirishima
+    Kongou
+};
+const int sizeKongous = sizeof(kongous)/sizeof(kongous[0]);
 
 int splash(Info* i);
 void settings(Info* i);

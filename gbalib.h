@@ -100,6 +100,8 @@ typedef struct
 
 #define BUTTONS *(volatile u32*) 0x4000130
 
+u16* videoBuffer = (u16*) 0x6000000;
+
 // Prototypes
 
 void setPixel(int row, int col, u16 color);
