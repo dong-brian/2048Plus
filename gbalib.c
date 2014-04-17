@@ -1,5 +1,7 @@
 #include "GBALib.h"
 
+u16* videoBuffer = (u16*) 0x6000000;
+
 void setPixel(int row, int col, u16 color) {
     videoBuffer[OFFSET(row, col, 240)] = color;
 }
@@ -95,10 +97,18 @@ void drawImage(const unsigned short *img) {
     DMA[3].cnt = 38400 | DMA_ON;
 }
 
-void drawImageAt(int x, int y, int width, int height, const unsigned short *img) {
-    for (int i = 0; i < height; i++) {
+void drawImageAt(int row, int col, int width, int height, const unsigned short *img) {
+    for (int r = 0; r < height; r++) {
         DMA[3].src = img;
-        DMA[3].dst = videoBuffer[OFFSET(y + i, x, 240)];
+        DMA[3].dst = &videoBuffer[OFFSET(row + r, col, 240)];
+        DMA[3].cnt = width | DMA_ON;
+    }
+}
+
+void blit(int row, int col, int width, int height, int x, int y, int imgWidth, const unsigned short *img) {
+    for (int r = 0; r < height; r++) {
+        DMA[3].src = &img[OFFSET(y + r, x, imgWidth)];
+        DMA[3].dst = &videoBuffer[OFFSET(row + r, col, 240)];
         DMA[3].cnt = width | DMA_ON;
     }
 }

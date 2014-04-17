@@ -1,4 +1,3 @@
-
 //{{BLOCK(KongouSisters)
 
 //======================================================================
@@ -17,11 +16,35 @@
 #define GRIT_KONGOUSISTERS_H
 
 #define KongouSistersBitmapLen 76800
-extern const unsigned short KongouSistersBitmap[38400];
+extern const unsigned short KongouSisters[38400];
 
 #endif // GRIT_KONGOUSISTERS_H
 
 //}}BLOCK(KongouSisters)
+
+//{{BLOCK(EnemyFleet)
+
+//======================================================================
+//
+//	EnemyFleet, 240x160@16, 
+//	+ bitmap not compressed
+//	Total size: 76800 = 76800
+//
+//	Time-stamp: 2014-04-16, 19:36:17
+//	Exported by Cearn's GBA Image Transmogrifier, v0.8.3
+//	( http://www.coranac.com/projects/#grit )
+//
+//======================================================================
+
+#ifndef GRIT_ENEMYFLEET_H
+#define GRIT_ENEMYFLEET_H
+
+#define EnemyFleetBitmapLen 76800
+extern const unsigned short EnemyFleet[38400];
+
+#endif // GRIT_ENEMYFLEET_H
+
+//}}BLOCK(EnemyFleet)
 
 //{{BLOCK(Haruna)
 
@@ -40,8 +63,8 @@ extern const unsigned short KongouSistersBitmap[38400];
 #ifndef GRIT_HARUNA_H
 #define GRIT_HARUNA_H
 
-#define HarunaBitmapLen 364
-extern const unsigned short HarunaBitmap[182];
+#define HarunaBitmapLen 338
+extern const unsigned short Haruna[169];
 
 #endif // GRIT_HARUNA_H
 
@@ -64,8 +87,8 @@ extern const unsigned short HarunaBitmap[182];
 #ifndef GRIT_HIEI_H
 #define GRIT_HIEI_H
 
-#define HieiBitmapLen 364
-extern const unsigned short HieiBitmap[182];
+#define HieiBitmapLen 338
+extern const unsigned short Hiei[169];
 
 #endif // GRIT_HIEI_H
 
@@ -88,8 +111,8 @@ extern const unsigned short HieiBitmap[182];
 #ifndef GRIT_KIRISHIMA_H
 #define GRIT_KIRISHIMA_H
 
-#define KirishimaBitmapLen 364
-extern const unsigned short KirishimaBitmap[182];
+#define KirishimaBitmapLen 338
+extern const unsigned short Kirishima[169];
 
 #endif // GRIT_KIRISHIMA_H
 
@@ -112,8 +135,8 @@ extern const unsigned short KirishimaBitmap[182];
 #ifndef GRIT_KONGOU_H
 #define GRIT_KONGOU_H
 
-#define KongouBitmapLen 364
-extern const unsigned short KongouBitmap[182];
+#define KongouBitmapLen 338
+extern const unsigned short Kongou[169];
 
 #endif // GRIT_KONGOU_H
 

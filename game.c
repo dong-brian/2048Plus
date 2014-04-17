@@ -19,7 +19,8 @@
 
 typedef enum {
     RANDOM,
-    FIXED
+    FIXED,
+    KANTAI_KONGOU
 } Style;
 
 typedef enum {
@@ -48,12 +49,6 @@ typedef enum {
 } Direction;
 
 typedef struct {
-    int seed;
-    int size;
-    Style mode;
-} Info;
-
-typedef struct {
     Outcome outcome;
     int score;
 } Result;
@@ -64,6 +59,13 @@ typedef struct {
 } Block;
 
 typedef const unsigned short* Image;
+
+char* modeStrs[] = {
+    "Color Mode: Fixed",
+    "Color Mode: Random",
+    "Color Mode: KanColle Kongou"
+};
+const int sizeModeStrs = sizeof(modeStrs)/sizeof(modeStrs[0]);
 
 const int colors[] = {
     RED,
@@ -76,44 +78,46 @@ const int colors[] = {
 const int sizeColors = sizeof(colors)/sizeof(colors[0]);
 
 const Image kongous[] = {
-    Haruna
-    Hiei
-    Kirishima
+    Haruna,
+    Hiei,
+    Kirishima,
     Kongou
 };
 const int sizeKongous = sizeof(kongous)/sizeof(kongous[0]);
 
-int splash(Info* i);
-void settings(Info* i);
+Style mode = FIXED;
+int size = 4;
+
+int splash(int *seed);
+void settings(int *seed);
 void instructions();
-Result game(int seed, int size, Style mode);
+Result game(int seed);
 void gameOver(Outcome outcome, int score);
 void drawSplash();
+void resetGame(Block *blocks, int *blocksLeft, Result *result);
 void drawBlockCoor(int x, int y, Block b);
-void drawBlock(Block* blocks, int size, int index);
-void drawBlocks(Block* blocks, int size);
-void drawMovingBlocks(int row, int col, int size, Direction d, int spaces);
-void drawBoard(int size);
+void drawBlock(Block *blocks, int index);
+void drawMovingBlocks(int row, int col, Direction d, int spaces);
+void drawBoard();
 void drawGameText();
 void updateScoreDisplay(int score);
-int spawnBlock(Block* blocks, int blocksLeft, Style mode);
-int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d, int* score, int* blocksLeft, Outcome* outcome);
-int moveBlocks(Block* blocks, int size, Style mode, Direction d, int* score, int* blocksLeft, Outcome* outcome);
-int hasMoves(Block* blocks, int size);
-void initializeBlocks(Block* blocks, int size);
-u16 getColor(int i, Style mode);
+int spawnBlock(Block *blocks, int blocksLeft);
+int moveBlock(int row, int col, Block *blocks, Direction d, int *score, int *blocksLeft, Outcome *outcome);
+int moveBlocks(Block *blocks, Direction d, int *score, int *blocksLeft, Outcome *outcome);
+int hasMoves(Block *blocks);
+void initializeBlocks(Block *blocks);
+u16 getColor(int i);
 
 int main() {
     REG_DISPCTL = MODE3 | BG2_ENABLE;
     State_Game state = SPLASH;
     Result result = {LOSE, 0};
-    Info ii = {0, 4, FIXED};
-    Info* i = &ii;
+    int seed = 0;
     int button = 0;
     while (1) {
         switch (state) {
             case SPLASH:
-                button = splash(i);
+                button = splash(&seed);
                 switch (button) {
                     case BUTTON_START:
                         state = GAME;
@@ -131,11 +135,11 @@ int main() {
                 state = GAME;
                 break;
             case SETTINGS:
-                settings(i);
+                settings(&seed);
                 state = SPLASH;
                 break;
             case GAME:
-                result = game(i->seed, i->size, i->mode);
+                result = game(seed);
                 state = GAME_OVER;
                 break;
             case GAME_OVER:
@@ -154,13 +158,13 @@ int main() {
  * 
  * @return  the button pressed to exit the splash screen
  */
-int splash(Info* i) {
+int splash(int *seed) {
     int result = 0;
     waitForVblank();
     drawSplash();
     while (!KEY_DOWN_NOW(BUTTON_START) && !KEY_DOWN_NOW(BUTTON_A)
             && !KEY_DOWN_NOW(BUTTON_SELECT)) {
-        i->seed++;
+        (*seed)++;
     }
     if (KEY_DOWN_NOW(BUTTON_START)) {
         result = BUTTON_START;
@@ -177,20 +181,23 @@ int splash(Info* i) {
 /* 
  * 
  */
-void settings(Info* i) {
+void settings(int *seed) {
     State_Settings_Menu state = CHANGE_SIZE;
-    Info jj = {0, i->size, i->mode};
-    Info* j = &jj;
     char buffer[9];
-    char* modeString = "";
-    char* oldModeString = "";
-    sprintf(buffer, "Size: %d", j->size);
-    switch (j->mode) {
+    char* modeStr = "";
+    char* oldModeStr = "";
+    int tempSize = size;
+    Style tempMode =  mode;
+    sprintf(buffer, "Size: %d", size);
+    switch (mode) {
         case FIXED:
-            modeString = "Color Mode: Fixed";
+            modeStr = modeStrs[0];
             break;
         case RANDOM:
-            modeString = "Color Mode: Random";
+            modeStr = modeStrs[1];
+            break;
+        case KANTAI_KONGOU:
+            modeStr = modeStrs[2];
             break;
     }
     waitForVblank();
@@ -199,11 +206,12 @@ void settings(Info* i) {
     drawString(30, 10, "Use Up and Down to choose a setting.", YELLOW);
     drawString(50, 10, "Use Left and Right to modify.", YELLOW);
     drawString(70, 30, buffer, YELLOW);
-    drawString(90, 30, modeString, YELLOW);
+    drawString(90, 30, modeStr, YELLOW);
     drawString(110, 10, "Press Start to save changes.", YELLOW);
     drawString(130, 10, "Press B to exit without saving.", YELLOW);
     drawString(70, 10, ">>", GREEN);
     while (!KEY_DOWN_NOW(BUTTON_START) && !KEY_DOWN_NOW(BUTTON_B)) {
+        (*seed)++;
         if (KEY_DOWN_NOW(BUTTON_UP)) {
             switch (state) {
                 case CHANGE_SIZE:
@@ -241,32 +249,34 @@ void settings(Info* i) {
         if (KEY_DOWN_NOW(BUTTON_RIGHT)) {
             switch (state) {
                 case CHANGE_SIZE:
-                    if (j->size < 10) {
-                        j->size++;
+                    if (tempSize < 10) {
+                        tempSize++;
                     } else {
-                        j->size = 2;
+                        tempSize = 2;
                     }
-                    sprintf(buffer, "Size: %d", j->size);
+                    sprintf(buffer, "Size: %d", tempSize);
                     waitForVblank();
                     drawRect(70, 30, 6*8, 8, BLACK);
                     drawString(70, 30, buffer, YELLOW);
                     break;
                 case CHANGE_MODE:
-                    switch (j->mode) {
+                    oldModeStr = modeStr;
+                    switch (tempMode) {
                         case FIXED:
-                            j->mode = RANDOM;
-                            oldModeString = modeString;
-                            modeString = "Color Mode: Random";
+                            tempMode = RANDOM;
+                            modeStr = modeStrs[1];
                             break;
                         case RANDOM:
-                            j->mode = FIXED;
-                            oldModeString = modeString;
-                            modeString = "Color Mode: Fixed";
+                            tempMode = KANTAI_KONGOU;
+                            modeStr = modeStrs[2];
                             break;
+                        case KANTAI_KONGOU:
+                            tempMode = FIXED;
+                            modeStr = modeStrs[0];
                     }
                     waitForVblank();
-                    drawString(90, 30, oldModeString, BLACK);
-                    drawString(90, 30, modeString, YELLOW);
+                    drawString(90, 30, oldModeStr, BLACK);
+                    drawString(90, 30, modeStr, YELLOW);
                     break;
             }
             while (KEY_DOWN_NOW(BUTTON_RIGHT));
@@ -274,41 +284,42 @@ void settings(Info* i) {
         if (KEY_DOWN_NOW(BUTTON_LEFT)) {
             switch (state) {
                 case CHANGE_SIZE:
-                    if (j->size > 2) {
-                        j->size--;
+                    if (tempSize > 2) {
+                        tempSize--;
                     } else {
-                        j->size = 10;
+                        tempSize = 10;
                     }
-                    sprintf(buffer, "Size: %d", j->size);
+                    sprintf(buffer, "Size: %d", tempSize);
                     waitForVblank();
                     drawRect(70, 30, 6*8, 8, BLACK);
                     drawString(70, 30, buffer, YELLOW);
                     break;
                 case CHANGE_MODE:
-                    switch (j->mode) {
+                    oldModeStr = modeStr;
+                    switch (tempMode) {
                         case FIXED:
-                            j->mode = RANDOM;
-                            oldModeString = modeString;
-                            modeString = "Color Mode: Random";
+                            tempMode = KANTAI_KONGOU;
+                            modeStr = modeStrs[2];
                             break;
                         case RANDOM:
-                            j->mode = FIXED;
-                            oldModeString = modeString;
-                            modeString = "Color Mode: Fixed";
+                            tempMode = FIXED;
+                            modeStr = modeStrs[0];
                             break;
+                        case KANTAI_KONGOU:
+                            tempMode = RANDOM;
+                            modeStr = modeStrs[1];
                     }
                     waitForVblank();
-                    drawString(90, 30, oldModeString, BLACK);
-                    drawString(90, 30, modeString, YELLOW);
+                    drawString(90, 30, oldModeStr, BLACK);
+                    drawString(90, 30, modeStr, YELLOW);
                     break;
             }
             while (KEY_DOWN_NOW(BUTTON_LEFT));
         }
         if (KEY_DOWN_NOW(BUTTON_START)) {
-            i->size = j->size;
-            i->mode = j->mode;
+            size = tempSize;
+            mode = tempMode;
         }
-        i->seed++;
     }
     while (KEY_DOWN_NOW(BUTTON_START) || KEY_DOWN_NOW(BUTTON_B));
 }
@@ -320,6 +331,7 @@ void settings(Info* i) {
 void instructions() {
     waitForVblank();
     fillScreen(BLACK);
+    waitForVblank();
     drawString(30, 10, "D-Pad to move blocks.", YELLOW);
     drawString(50, 10, "If two blocks with the same", YELLOW);
     drawString(70, 10, "number hit, they will merge!", YELLOW);
@@ -331,63 +343,56 @@ void instructions() {
 /* 
  * 
  */
-Result game(int seed, int size, Style mode) {
+Result game(int seed) {
     Result result = {LOSE, 0};
     srand(seed);
     Block blocks[size*size];
-    initializeBlocks(blocks, size);
-    int blocksLeft = size*size;
-    int index[2];
-    index[0] = spawnBlock(blocks, blocksLeft--, mode);
-    index[1] = spawnBlock(blocks, blocksLeft--, mode);
-    result.score += 1<<blocks[index[0]].num;
-    result.score += 1<<blocks[index[1]].num;
-    waitForVblank();
-    fillScreen(BLACK);
-    drawBoard(size);
-    drawGameText();
-    updateScoreDisplay(result.score);
-    drawBlock(blocks, size, index[0]);
-    drawBlock(blocks, size, index[1]);
+    int blocksLeft = 0;
+    resetGame(blocks, &blocksLeft, &result);
+    int index = 0;
     int spawn = FALSE;
     int quit = FALSE;
     while (!quit) {
         if (KEY_DOWN_NOW(BUTTON_UP)) {
-            if (blocksLeft && moveBlocks(blocks, size, mode, UP, &result.score, &blocksLeft, &result.outcome)) {
+            if (moveBlocks(blocks, UP, &result.score, &blocksLeft, &result.outcome) && blocksLeft) {
                 spawn = TRUE;
             }
             while (KEY_DOWN_NOW(BUTTON_UP));
         }
         if (KEY_DOWN_NOW(BUTTON_DOWN)) {
-            if (blocksLeft && moveBlocks(blocks, size, mode, DOWN, &result.score, &blocksLeft, &result.outcome)) {
+            if (moveBlocks(blocks, DOWN, &result.score, &blocksLeft, &result.outcome) && blocksLeft) {
                 spawn = TRUE;
             }
             while (KEY_DOWN_NOW(BUTTON_DOWN));
         }
         if (KEY_DOWN_NOW(BUTTON_LEFT)) {
-            if (blocksLeft && moveBlocks(blocks, size, mode, LEFT, &result.score, &blocksLeft, &result.outcome)) {
+            if (moveBlocks(blocks, LEFT, &result.score, &blocksLeft, &result.outcome) && blocksLeft) {
                 spawn = TRUE;
             }
             while (KEY_DOWN_NOW(BUTTON_LEFT));
         }
         if (KEY_DOWN_NOW(BUTTON_RIGHT)) {
-            if (blocksLeft && moveBlocks(blocks, size, mode, RIGHT, &result.score, &blocksLeft, &result.outcome)) {
+            if (moveBlocks(blocks, RIGHT, &result.score, &blocksLeft, &result.outcome) && blocksLeft) {
                 spawn = TRUE;
             }
             while (KEY_DOWN_NOW(BUTTON_RIGHT));
         }
         if (spawn) {
-            index[0] = spawnBlock(blocks, blocksLeft--, mode);
-            result.score += 1<<blocks[index[0]].num;
+            index = spawnBlock(blocks, blocksLeft--);
+            result.score += 1<<blocks[index].num;
             waitForVblank();
-            drawBlock(blocks, size, index[0]);
+            drawBlock(blocks, index);
             updateScoreDisplay(result.score);
-            quit = !hasMoves(blocks, size);
+            quit = !hasMoves(blocks);
             spawn = FALSE;
         }
         if (KEY_DOWN_NOW(BUTTON_B)) {
             quit = TRUE;
             while (KEY_DOWN_NOW(BUTTON_B));
+        }
+        if (KEY_DOWN_NOW(BUTTON_SELECT)) {
+            resetGame(blocks, &blocksLeft, &result);
+            while (KEY_DOWN_NOW(BUTTON_SELECT));
         }
     }
     //put a while loop here to check if game ends properly
@@ -410,7 +415,7 @@ void gameOver(Outcome outcome, int score) {
     }
     sprintf(buffer, "Score: %d", score);
     waitForVblank();
-    fillScreen(BLACK);
+    drawImage(EnemyFleet);
     waitForVblank();
     drawString(30, 10, "GAME OVER", RED);
     drawString(50, 10, s, YELLOW);
@@ -424,12 +429,37 @@ void gameOver(Outcome outcome, int score) {
  * 
  */
 void drawSplash() {
-    drawImage(KongouSistersBitmap);
+    drawImage(KongouSisters);
     waitForVblank();
     drawString(70, 10, "2048+", YELLOW);
     drawString(90, 10, "Press Start to begin.", YELLOW);
     drawString(110, 10, "Press Select to change settings.", YELLOW);
     drawString(130, 10, "Press A for how to play.", YELLOW);
+}
+
+/*
+ * 
+ */
+void resetGame(Block *blocks, int *blocksLeft, Result *result) {
+    result->outcome = LOSE;
+    result->score = 0;
+    initializeBlocks(blocks);
+    *blocksLeft = size*size;
+    int index[2];
+    index[0] = spawnBlock(blocks, *blocksLeft);
+    (*blocksLeft)--;
+    index[1] = spawnBlock(blocks, *blocksLeft);
+    (*blocksLeft)--;
+    result->score += 1<<blocks[index[0]].num;
+    result->score += 1<<blocks[index[1]].num;
+    waitForVblank();
+    fillScreen(BLACK);
+    waitForVblank();
+    drawBoard();
+    drawGameText();
+    updateScoreDisplay(result->score);
+    drawBlock(blocks, index[0]);
+    drawBlock(blocks, index[1]);
 }
 
 /* 
@@ -439,10 +469,21 @@ void drawBlockCoor(int row, int col, Block b) {
     int r = TOP_MARGIN + (BLOCK_SIZE + 1)*row + 1;
     int c = LEFT_MARGIN + (BLOCK_SIZE + 1)*col + 1;
     if (b.num) {
-        u16 color = b.color;
+		u16 color = BLACK;
+		Image img = kongous[0];
+        switch (mode) {
+            case FIXED:
+            case RANDOM:
+                color = b.color;
+                drawRect(r, c, BLOCK_SIZE, BLOCK_SIZE, color);
+                break;
+            case KANTAI_KONGOU:
+                img = kongous[b.color];
+                blit(r, c, BLOCK_SIZE, BLOCK_SIZE, 0, 0, 13, img);
+                break;
+        }
         char buffer[3];
         sprintf(buffer, "%2d",  b.num);
-        drawRect(r, c, BLOCK_SIZE, BLOCK_SIZE, color);
         drawString(r + 3, c, buffer, BLACK);
     } else {
         drawRect(r, c, BLOCK_SIZE, BLOCK_SIZE, BLACK);
@@ -452,23 +493,14 @@ void drawBlockCoor(int row, int col, Block b) {
 /* 
  * 
  */
-void drawBlock(Block* blocks, int size, int index) {
+void drawBlock(Block *blocks, int index) {
     drawBlockCoor(index/size, index%size, blocks[index]);
 }
 
 /* 
  * 
  */
-void drawBlocks(Block* blocks, int size) {
-    for (int i = 0; i < size*size; i++) {
-        drawBlock(blocks, size, i);
-    }
-}
-
-/* 
- * 
- */
-void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
+void drawMovingBlocks(int row, int col, Direction d, int spaces) {
     int r = TOP_MARGIN + (BLOCK_SIZE + 1)*row + 1;
     int c = LEFT_MARGIN + (BLOCK_SIZE + 1)*col + 1;
     int length = 0;
@@ -479,6 +511,7 @@ void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
                 for (int j = 0; j < BLOCK_NUM_MOVES; j++) {
                     shiftRectVertical(r + BLOCK_SPEED, c, BLOCK_SIZE, length, -BLOCK_SPEED);
                 }
+                waitForVblank();
                 drawHorizontalLine(r + length, c, BLOCK_SIZE, WHITE);
             }
             break;
@@ -489,6 +522,7 @@ void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
                 for (int j = 0; j < BLOCK_NUM_MOVES; j++) {
                     shiftRectVertical(r, c, BLOCK_SIZE, length - BLOCK_SPEED, BLOCK_SPEED);
                 }
+                waitForVblank();
                 drawHorizontalLine(r + BLOCK_SIZE, c, BLOCK_SIZE, WHITE);
             }
             break;
@@ -498,6 +532,7 @@ void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
                 for (int j = 0; j < BLOCK_NUM_MOVES; j++) {
                     shiftRectHorizontal(r, c + BLOCK_SPEED, length, BLOCK_SIZE, -BLOCK_SPEED);
                 }
+                waitForVblank();
                 drawVerticalLine(r, c + length, BLOCK_SIZE, WHITE);
             }
             break;
@@ -508,6 +543,7 @@ void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
                 for (int j = 0; j < BLOCK_NUM_MOVES; j++) {
                     shiftRectHorizontal(r, c, length - BLOCK_SPEED, BLOCK_SIZE, BLOCK_SPEED);
                 }
+                waitForVblank();
                 drawVerticalLine(r, c + BLOCK_SIZE, BLOCK_SIZE, WHITE);
             }
             break;
@@ -517,7 +553,7 @@ void drawMovingBlocks(int row, int col, int size, Direction d, int spaces) {
 /* 
  * 
  */
-void drawBoard(int size) {
+void drawBoard() {
     int length = (BLOCK_SIZE + 1)*size + 1;
     for (int i = 0; i <= size; i++) {
         drawHorizontalLine(TOP_MARGIN + (BLOCK_SIZE + 1)*i, LEFT_MARGIN, length, WHITE);
@@ -552,7 +588,7 @@ void updateScoreDisplay(volatile int score) {
 /* 
  * returns index of spawned block
  */
-int spawnBlock(Block* blocks, int blocksLeft, Style mode) {
+int spawnBlock(Block* blocks, int blocksLeft) {
     if (blocksLeft < 1) {
         return 0;//dummy
     } else {
@@ -571,7 +607,7 @@ int spawnBlock(Block* blocks, int blocksLeft, Style mode) {
             i++;
         }
         blocks[i].num = 1 + (rand()%100 < SPAWN_PERCENT);
-        blocks[i].color = getColor(blocks[i].num, mode);\
+        blocks[i].color = getColor(blocks[i].num);\
         return i;
     }
 }
@@ -579,7 +615,7 @@ int spawnBlock(Block* blocks, int blocksLeft, Style mode) {
 /* 
  * TRUE if a move was made
  */
-int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d, int* score, int* blocksLeft, Outcome* outcome) {
+int moveBlock(int row, int col, Block* blocks, Direction d, int* score, int* blocksLeft, Outcome* outcome) {
     int result = FALSE;
     int count = 0;
     int found = FALSE;
@@ -601,7 +637,7 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                                 blocks[OFFSET(r, col, size)] = blocks[OFFSET(r + count, col, size)];
                             }
                         }
-                        drawMovingBlocks(row, col, size, UP, count);
+                        drawMovingBlocks(row, col, UP, count);
                         result = TRUE;
                     }
                     b = &blocks[OFFSET(row, col, size)];
@@ -614,19 +650,19 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                     if (found) {
                         if (b->num == blocks[OFFSET(found, col, size)].num) {
                             (b->num)++;
-                            b->color = getColor(b->num, mode);
+                            b->color = getColor(b->num);
                             if (b->num == 11) {
                                 *outcome = WIN;
                             }
                             *score += + (1<<b->num);
                             (*blocksLeft)++;
-                            drawBlock(blocks, size, OFFSET(row, col, size));
+                            drawBlock(blocks, OFFSET(row, col, size));
                             b = &blocks[OFFSET(found, col, size)];
                             b->num = 0;
                             b->color = BLACK;
-                            drawBlock(blocks, size, OFFSET(found, col, size));
+                            drawBlock(blocks, OFFSET(found, col, size));
+                            result = TRUE;
                         }
-                        result = TRUE;
                     }
                 }
             }
@@ -647,7 +683,7 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                                 blocks[OFFSET(r, col, size)] = blocks[OFFSET(r - count, col, size)];
                             }
                         }
-                        drawMovingBlocks(row, col, size, DOWN, count);
+                        drawMovingBlocks(row, col, DOWN, count);
                         result = TRUE;
                     }
                     b = &blocks[OFFSET(row, col, size)];
@@ -660,19 +696,19 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                     if (found != size) {
                         if (b->num == blocks[OFFSET(found, col, size)].num) {
                             (b->num)++;
-                            b->color = getColor(b->num, mode);
+                            b->color = getColor(b->num);
                             if (b->num == 11) {
                                 *outcome = WIN;
                             }
                             *score += (1<<b->num);
                             (*blocksLeft)++;
-                            drawBlock(blocks, size, OFFSET(row, col, size));
+                            drawBlock(blocks, OFFSET(row, col, size));
                             b = &blocks[OFFSET(found, col, size)];
                             b->num = 0;
                             b->color = BLACK;
-                            drawBlock(blocks, size, OFFSET(found, col, size));
+                            drawBlock(blocks, OFFSET(found, col, size));
+                            result = TRUE;
                         }
-                        result = TRUE;
                     }
                 }
             }
@@ -693,7 +729,7 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                                 blocks[OFFSET(row, c, size)] = blocks[OFFSET(row, c + count, size)];
                             }
                         }
-                        drawMovingBlocks(row, col, size, LEFT, count);
+                        drawMovingBlocks(row, col, LEFT, count);
                         result = TRUE;
                     }
                     b = &blocks[OFFSET(row, col, size)];
@@ -706,19 +742,19 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                     if (found) {
                         if (b->num == blocks[OFFSET(row, found, size)].num) {
                             (b->num)++;
-                            b->color = getColor(b->num, mode);
+                            b->color = getColor(b->num);
                             if (b->num == 11) {
                                 *outcome = WIN;
                             }
                             *score += + (1<<b->num);
                             (*blocksLeft)++;
-                            drawBlock(blocks, size, OFFSET(row, col, size));
+                            drawBlock(blocks, OFFSET(row, col, size));
                             b = &blocks[OFFSET(row, found, size)];
                             b->num = 0;
                             b->color = BLACK;
-                            drawBlock(blocks, size, OFFSET(row, found, size));
+                            drawBlock(blocks, OFFSET(row, found, size));
+                            result = TRUE;
                         }
-                        result = TRUE;
                     }
                 }
             }
@@ -739,7 +775,7 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                                 blocks[OFFSET(row, c, size)] = blocks[OFFSET(row, c - count, size)];
                             }
                         }
-                        drawMovingBlocks(row, col, size, RIGHT, count);
+                        drawMovingBlocks(row, col, RIGHT, count);
                         result = TRUE;
                     }
                     b = &blocks[OFFSET(row, col, size)];
@@ -752,19 +788,19 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
                     if (found != size) {
                         if (b->num == blocks[OFFSET(row, found, size)].num) {
                             (b->num)++;
-                            b->color = getColor(b->num, mode);
+                            b->color = getColor(b->num);
                             if (b->num == 11) {
                                 *outcome = WIN;
                             }
                             *score += (1<<b->num);
                             (*blocksLeft)++;
-                            drawBlock(blocks, size, OFFSET(row, col, size));
+                            drawBlock(blocks, OFFSET(row, col, size));
                             b = &blocks[OFFSET(row, found, size)];
                             b->num = 0;
                             b->color = BLACK;
-                            drawBlock(blocks, size, OFFSET(row, found, size));
+                            drawBlock(blocks, OFFSET(row, found, size));
+                            result = TRUE;
                         }
-                        result = TRUE;
                     }
                 }
             }
@@ -774,36 +810,36 @@ int moveBlock(int row, int col, Block* blocks, int size, Style mode, Direction d
 }
 
 /* 
- * returns WIN if a 2048 block was created
+ * returns TRUE if a move was made
  */
-int moveBlocks(Block* blocks, int size, Style mode, Direction d, int* score, int* blocksLeft, Outcome* outcome) {
-    int result = LOSE;
+int moveBlocks(Block* blocks, Direction d, int* score, int* blocksLeft, Outcome* outcome) {
+    int result = FALSE;
     switch (d) {
         case UP:
             for (int r = 0; r < size - 1; r++) {
                 for (int c = 0; c < size; c++) {
-                    result = result || moveBlock(r, c, blocks, size, mode, UP, score, blocksLeft, outcome);
+                    result = moveBlock(r, c, blocks, UP, score, blocksLeft, outcome) || result;
                 }
             }
             break;
         case DOWN:
             for (int r = size - 1; r >= 1; r--) {
                 for (int c = 0; c < size; c++) {
-                    result = result || moveBlock(r, c, blocks, size, mode, DOWN, score, blocksLeft, outcome);
+                    result = moveBlock(r, c, blocks, DOWN, score, blocksLeft, outcome) || result;
                 }
             }
             break;
         case LEFT:
             for (int c = 0; c < size - 1; c++) {
                 for (int r = 0; r < size; r++) {
-                    result = result || moveBlock(r, c, blocks, size, mode, LEFT, score, blocksLeft, outcome);
+                    result = moveBlock(r, c, blocks, LEFT, score, blocksLeft, outcome) || result;
                 }
             }
             break;
         case RIGHT:
             for (int c = size - 1; c >= 1; c--) {
                 for (int r = 0; r < size; r++) {
-                    result = result || moveBlock(r, c, blocks, size, mode, RIGHT, score, blocksLeft, outcome);
+                    result = moveBlock(r, c, blocks, RIGHT, score, blocksLeft, outcome) || result;
                 }
             }
             break;
@@ -815,7 +851,7 @@ int moveBlocks(Block* blocks, int size, Style mode, Direction d, int* score, int
  * 
  * @return  TRUE if there are available moves, FALSE otherwise
  */
-int hasMoves(Block* blocks, int size) {
+int hasMoves(Block* blocks) {
     int limit = size - 1;
     int x = 0;
     for (int r = 0; r < size; r++) {
@@ -837,21 +873,30 @@ int hasMoves(Block* blocks, int size) {
     return FALSE;
 }
 
-void initializeBlocks(Block* blocks, int size) {
+/*
+ *
+ */
+void initializeBlocks(Block* blocks) {
     for (int i = 0; i < size*size; i++) {
         blocks[i].num = 0;
         blocks[i].color = BLACK;
     }
 }
 
-u16 getColor(int i, Style mode) {
+/*
+ * 
+ */
+u16 getColor(int i) {
     u16 color = BLACK;    
     switch (mode) {
         case FIXED:
-                color = colors[i%sizeColors];
+            color = colors[i%sizeColors];
             break;
         case RANDOM:
-                color = colors[rand()%sizeColors];
+            color = colors[rand()%sizeColors];
+            break;
+        case KANTAI_KONGOU:
+            color = i%sizeKongous;
             break;
     }
     return color;

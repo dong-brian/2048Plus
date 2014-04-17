@@ -100,8 +100,6 @@ typedef struct
 
 #define BUTTONS *(volatile u32*) 0x4000130
 
-u16* videoBuffer = (u16*) 0x6000000;
-
 // Prototypes
 
 void setPixel(int row, int col, u16 color);
@@ -119,4 +117,5 @@ void shiftRectHorizontal(int row, int col, int width, int height, int shift);
 void shiftRectVertical(int row, int col, int width, int height, int shift);
 void drawImage(const unsigned short *img);
 void drawImageAt(int x, int y, int width, int height, const unsigned short *img);
+void blit(int row, int col, int width, int height, int x, int y, int imgWidth, const unsigned short *img);
 void waitForVblank();
